@@ -48,6 +48,12 @@ class Comment
      */
     private $photo;
 
+    public function __toString()
+    {
+        return $this->email;
+        // TODO: Implement __toString() method.
+    }
+
     public function getId(): ?int
     {
         return $this->id;
