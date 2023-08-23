@@ -17,11 +17,7 @@ class ConferenceController extends AbstractController
      */
     public function index(ConferenceRepository $conferenceRepository): Response
     {
-        $conferences = $conferenceRepository->findAll();
-
-        return $this->render('conference/index.html.twig', [
-            'conferences' => $conferences
-        ]);
+        return $this->render('conference/index.html.twig');
     }
 
     /**
