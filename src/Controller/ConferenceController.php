@@ -21,7 +21,7 @@ class ConferenceController extends AbstractController
     }
 
     /**
-     * @Route("/conference/{id}", name="app_conference")
+     * @Route("/conference/{slug}", name="app_conference")
      */
     public function showIndex(Request $request, CommentRepository $commentRepository, Conference $conference): Response
     {
