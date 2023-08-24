@@ -19,12 +19,9 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 class ConferenceController extends AbstractController
 {
     private $em;
-    private $slugger;
-
-    public function __construct(EntityManagerInterface $em, SluggerInterface $slugger)
+    public function __construct(EntityManagerInterface $em)
     {
         $this->em = $em;
-        $this->slugger = $slugger;
     }
 
     /**
