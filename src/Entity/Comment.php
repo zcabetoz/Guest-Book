@@ -54,6 +54,11 @@ class Comment
      */
     private $photo;
 
+    /**
+     * @ORM\Column(type="string", length=255)
+     */
+    private $state = 'submitted';
+
     public function __toString()
     {
         return $this->email;
@@ -141,6 +146,18 @@ class Comment
     public function setPhoto(?string $photo): self
     {
         $this->photo = $photo;
+
+        return $this;
+    }
+
+    public function getState(): ?string
+    {
+        return $this->state;
+    }
+
+    public function setState(string $state): self
+    {
+        $this->state = $state;
 
         return $this;
     }

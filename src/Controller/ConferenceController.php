@@ -5,15 +5,15 @@ namespace App\Controller;
 use App\Entity\Comment;
 use App\Entity\Conference;
 use App\Form\CommentFormType;
+use App\Message\CommentMessage;
 use App\Repository\CommentRepository;
-use App\Repository\ConferenceRepository;
 use App\SpamChecker;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\ORMException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
@@ -23,9 +23,12 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 class ConferenceController extends AbstractController
 {
     private $em;
-    public function __construct(EntityManagerInterface $em)
+    private $bus;
+
+    public function __construct(EntityManagerInterface $em, MessageBusInterface $bus)
     {
         $this->em = $em;
+        $this->bus = $bus;
     }
 
     /**
@@ -44,7 +47,7 @@ class ConferenceController extends AbstractController
      * @throws ServerExceptionInterface
      */
 
-    public function showIndex(Request $request, CommentRepository $commentRepository, Conference $conference, string $photoDir, SpamChecker $spamChecker): Response
+    public function showIndex(Request $request, CommentRepository $commentRepository, Conference $conference, string $photoDir): Response
     {
         $offset = max(0, $request->query->getInt('offset', 0));
         $paginator = $commentRepository->getCommentPaginator($conference, $offset);
@@ -69,17 +72,17 @@ class ConferenceController extends AbstractController
             }
 
             $this->em->persist($comment);
+            $this->em->flush();
 
             $context = [
-                'user_ip'=>$request->getClientIp(),
-                'user_agent'=>$request->headers->get('user-agent'),
-                'referrer'=>$request->headers->get('referer'),
-                'permalink'=>$request->getUri()
+                'user_ip' => $request->getClientIp(),
+                'user_agent' => $request->headers->get('user-agent'),
+                'referrer' => $request->headers->get('referer'),
+                'permalink' => $request->getUri()
             ];
-            if(2 === $spamChecker->getSpamScore($comment, $context)){
-                throw new \RuntimeException('Blatant spam, go away!');
-            }
-            $this->em->flush();
+
+            $this->bus->dispatch(new CommentMessage($comment->getId(), $context));
+
             return $this->redirectToRoute('app_conference', ['slug' => $conference->getSlug()]);
         }
 
