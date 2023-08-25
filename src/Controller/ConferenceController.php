@@ -7,6 +7,7 @@ use App\Entity\Conference;
 use App\Form\CommentFormType;
 use App\Repository\CommentRepository;
 use App\Repository\ConferenceRepository;
+use App\SpamChecker;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\ORMException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -14,7 +15,10 @@ use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\String\Slugger\SluggerInterface;
+use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 class ConferenceController extends AbstractController
 {
@@ -27,16 +31,20 @@ class ConferenceController extends AbstractController
     /**
      * @Route("/", name="app_homepage")
      */
-    public function index(ConferenceRepository $conferenceRepository): Response
+    public function index(): Response
     {
         return $this->render('conference/index.html.twig');
     }
 
     /**
      * @Route("/conference/{slug}", name="app_conference")
-     * //     * @throws ORMException
+     * @throws RedirectionExceptionInterface
+     * @throws ClientExceptionInterface
+     * @throws TransportExceptionInterface
+     * @throws ServerExceptionInterface
      */
-    public function showIndex(Request $request, CommentRepository $commentRepository, Conference $conference, string $photoDir): Response
+
+    public function showIndex(Request $request, CommentRepository $commentRepository, Conference $conference, string $photoDir, SpamChecker $spamChecker): Response
     {
         $offset = max(0, $request->query->getInt('offset', 0));
         $paginator = $commentRepository->getCommentPaginator($conference, $offset);
@@ -59,7 +67,18 @@ class ConferenceController extends AbstractController
                 }
                 $comment->setPhoto($safeFileName);
             }
+
             $this->em->persist($comment);
+
+            $context = [
+                'user_ip'=>$request->getClientIp(),
+                'user_agent'=>$request->headers->get('user-agent'),
+                'referrer'=>$request->headers->get('referer'),
+                'permalink'=>$request->getUri()
+            ];
+            if(2 === $spamChecker->getSpamScore($comment, $context)){
+                throw new \RuntimeException('Blatant spam, go away!');
+            }
             $this->em->flush();
             return $this->redirectToRoute('app_conference', ['slug' => $conference->getSlug()]);
         }
