@@ -7,6 +7,7 @@ use App\Entity\Conference;
 use App\Form\CommentFormType;
 use App\Message\CommentMessage;
 use App\Repository\CommentRepository;
+use App\Repository\ConferenceRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
@@ -33,9 +34,35 @@ class ConferenceController extends AbstractController
     /**
      * @Route("/", name="app_homepage")
      */
-    public function index(): Response
+    public function index(ConferenceRepository $conferenceRepository): Response
     {
-        return $this->render('conference/index.html.twig');
+        $conferences = $conferenceRepository->findAll();
+
+        $html = $this->renderView('conference/index.html.twig', [
+            'conferences' => $conferences
+        ]);
+
+        $response = new Response($html);
+
+        $response->setSharedMaxAge(30);
+
+        return $response;
+    }
+
+    /**
+     * @Route("/conference-header", name="app_conference_header")
+     */
+    public function conferenceHeaderIndex(ConferenceRepository $conferenceRepository): Response
+    {
+        $html = $this->renderView('conference/header.html.twig', [
+            'conferences' => $conferenceRepository->findAll()
+        ]);
+
+        $response = new Response($html);
+
+        $response->setSharedMaxAge(3600);
+
+        return $response;
     }
 
     /**
