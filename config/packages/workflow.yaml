@@ -16,6 +16,7 @@ framework:
         - potential_spam
         - spam
         - rejected
+        - ready
         - published
       transitions:
         accept:

@@ -2,6 +2,7 @@
 
 namespace App\MessageHandler;
 
+use App\ImageOptimizer;
 use App\Message\CommentMessage;
 use App\Repository\CommentRepository;
 use App\SpamChecker;
@@ -23,10 +24,20 @@ class CommentMessageHandler implements MessageHandlerInterface
     private $bus;
     private $logger;
     private $workflow;
+    private $imageOptimizer;
+    private $photoDir;
 
 
-    public function __construct(SpamChecker         $spamChecker, EntityManagerInterface $em, CommentRepository $commentRepository,
-                                MessageBusInterface $bus, WorkflowInterface $commentStateMachine, LoggerInterface $logger = null)
+    public function __construct(
+        SpamChecker            $spamChecker,
+        EntityManagerInterface $em,
+        CommentRepository      $commentRepository,
+        MessageBusInterface    $bus,
+        WorkflowInterface      $commentStateMachine,
+        string                 $photoDir,
+        ImageOptimizer         $imageOptimizer,
+        LoggerInterface        $logger = null
+    )
 
     {
         $this->spamChecker = $spamChecker;
@@ -35,6 +46,8 @@ class CommentMessageHandler implements MessageHandlerInterface
         $this->bus = $bus;
         $this->logger = $logger;
         $this->workflow = $commentStateMachine;
+        $this->imageOptimizer = $imageOptimizer;
+        $this->photoDir = $photoDir;
 
     }
 
@@ -68,6 +81,9 @@ class CommentMessageHandler implements MessageHandlerInterface
             $this->bus->dispatch($message);
 
         } elseif ($this->workflow->can($comment, 'publish') || $this->workflow->can($comment, 'publish_ham')) {
+            if ($comment->getPhoto()) {
+                $this->imageOptimizer->resize($this->photoDir . '/' . $comment->getPhoto());
+            }
             $this->workflow->apply($comment, $this->workflow->can($comment, 'publish') ? 'publish' : 'publish_ham');
             $this->em->flush();
 
