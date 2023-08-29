@@ -14,6 +14,8 @@ use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Notifier\Notification\Notification;
+use Symfony\Component\Notifier\NotifierInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
@@ -73,7 +75,7 @@ class ConferenceController extends AbstractController
      * @throws ServerExceptionInterface
      */
 
-    public function showIndex(Request $request, CommentRepository $commentRepository, Conference $conference, string $photoDir): Response
+    public function showIndex(Request $request, CommentRepository $commentRepository, Conference $conference, string $photoDir, NotifierInterface $notifier): Response
     {
         $offset = max(0, $request->query->getInt('offset', 0));
         $paginator = $commentRepository->getCommentPaginator($conference, $offset);
@@ -107,6 +109,7 @@ class ConferenceController extends AbstractController
                 'permalink' => $request->getUri()
             ];
 
+            $notifier->send(new Notification('Thank you for the feedback;  your comment will be posted after moderation', ['browser']));
             $this->bus->dispatch(new CommentMessage($comment->getId(), $context));
 
             return $this->redirectToRoute('app_conference', ['slug' => $conference->getSlug()]);
